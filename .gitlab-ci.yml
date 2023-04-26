@@ -1,0 +1,88 @@
+###########################################################
+#                     Config variables                    #
+###########################################################
+variables:
+  GIT_DEPTH: 1000
+
+###########################################################
+#                        Templates                        #
+###########################################################
+
+.job-template:
+  interruptible: true
+  tags:
+    - core
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH == "main"
+
+.veax-job-template:
+  interruptible: true
+  tags:
+    - core-veax
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH == "main"
+      changes:
+        - .gitlab-ci.yml
+        - common/**/*
+        - infra/**/*
+        - veax/**/*
+        - .cargo/**/*
+        - rust-toolchain.toml
+
+###########################################################
+#                       Stages                            #
+###########################################################
+
+stages:
+  - check
+  - build
+
+###########################################################
+#                        Check                            #
+###########################################################
+
+check-format:
+  extends:
+    - .job-template
+  stage: check
+  script:
+    - infra/format-crates.sh --check
+
+check-lint-veax:
+  extends:
+    - .veax-job-template
+  stage: check
+  needs:
+    - check-format
+  script:
+    - infra/lint-crates.sh veax --check
+
+check-lint-common:
+  extends:
+    - .job-template
+  stage: check
+  needs:
+    - check-format
+  script:
+    - infra/lint-crates.sh common --check
+
+###########################################################
+#                        VEAX                             #
+###########################################################
+
+veax-dex:
+  extends:
+    - .veax-job-template
+  stage: build
+  needs:
+    - check-lint-veax
+    - check-lint-common
+  before_script:
+    - cd ${CI_PROJECT_DIR}/veax/dex
+  script:
+    - ./build-wasm-release.sh
+    - sudo chown -R $(id -u):$(id -g) target res
+  artifacts:
+    paths:
+      - ${CI_PROJECT_DIR}/veax/dex/res
+

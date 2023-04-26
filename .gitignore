@@ -1,0 +1,21 @@
+.idea/
+.vscode/
+target/
+res/
+
+.near-credentials/
+
+*.orig
+
+.DS_Store
+
+cobertura.xml
+*.profraw
+coverage/
+
+.gitlab-ci-local/
+
+# Various files that a developer may put for their convenience, which will not be tracked in git.
+# Automation tasks can also use it to put there files that should not be tracked.
+.local
+
